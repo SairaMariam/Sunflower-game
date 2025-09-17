@@ -29,42 +29,42 @@
     margin: 24px auto;
     padding: 0 16px;
   }
-  header {
+  header { 
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  h1 {
-    font-size: 20px;
-    margin: 0;
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 12px; 
+    margin-bottom: 12px; 
+}
+  h1 { 
+    font-size: 20px; 
+    margin: 0; 
     display: flex; 
     align-items: center; 
-    gap: 8px;
-  }
-  .panel {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-    font-size: 14px;
-  }
+    gap: 8px; 
+}
+  .panel { 
+    display: flex; 
+    gap: 12px; 
+    align-items: center; 
+    flex-wrap: wrap; 
+    font-size: 14px; 
+}
   .btn {
-    appearance: none; border: 0;
-    background: var(--btn);
+    appearance: none; border: 0; 
+    background: var(--btn); 
     color: white;
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 8px 12px; 
+    border-radius: 12px; 
     cursor: pointer;
-    box-shadow: 0 6px 16px rgba(14,165,233,.25);
+    box-shadow: 0 6px 16px rgba(14,165,233,.25); 
     font-weight: 600;
   }
   .btn:active { transform: translateY(1px); }
-  .hud {
-    display: flex; gap: 16px; align-items: center;
-    font-weight: 600;
-  }
+  .hud { 
+    display: flex; gap: 16px; align-items: center; 
+    font-weight: 600; 
+}
   canvas {
     width: 720px; height: 480px;
     max-width: 100%; height: auto;
@@ -73,13 +73,13 @@
     background: #eaf7ea;
     display: block;
   }
-  .overlay {
-    position: absolute;
+  .overlay, .intro {
+    position: absolute; 
     left: 0; top: 0; right: 0; bottom: 0;
-    display: none;
+    display: none; 
     align-items: center; justify-content: center;
   }
-  .overlay.show { display: flex; }
+  .overlay.show, .intro.show { display: flex; }
   .card {
     background: rgba(255,255,255,.9);
     backdrop-filter: blur(6px);
@@ -90,17 +90,17 @@
     text-align: center;
     box-shadow: 0 16px 40px rgba(0,0,0,.18);
   }
-  .msg {
-    font-size: 18px;
-    margin: 8px 0 0 0;
-  }
-  .keys {
-    opacity: .8; font-size: 13px; margin-top: 8px;
-  }
-  .game-area {
-    position: relative;
-    display: inline-block;
-  }
+  .msg { 
+    font-size: 18px; 
+    margin: 8px 0 0 0; 
+}
+  .keys { 
+    opacity: .8; font-size: 13px; margin-top: 8px; 
+}
+  .game-area { 
+    position: relative; 
+    display: inline-block; 
+    }
 </style>
 </head>
 <body>
@@ -138,25 +138,17 @@
         </div>
       </div>
     </div>
-    <p class="keys">Controls: Use Arrow Keys on your Keyboard. Avoid storm clouds, catch your sunshine! Moving clouds go back and forth.Best of luck!!!</p>
+    <p class="keys">Controls: Arrow Keys or WASD. Avoid storm clouds, catch your sunshine!</p>
   </div>
 
 <script>
-  // ---------- Background Music ----------
+// ---------- Background Music ----------
 const music = new Audio("https://www.bensound.com/bensound-music/bensound-sunny.mp3");
 music.loop = true;
 
 // ---------- Level Data ----------
-// Legend:
-// '#' = wall (cloud block)
-// '.' = empty
-// 'S' = start
-// 'G' = goal (sun)
-// '~' = storm tile (hazard) - touching resets
-// '>' '<' '^' 'v' = moving storm cloud (hazard) that slides and bounces
-
 const LEVELS = [
-  { // 1
+  {
     map: [
 "###############",
 "#S....#.......#",
@@ -169,7 +161,7 @@ const LEVELS = [
 "#.###.#####.###",
 "#.......G.....#"
     ],
-    message: "🌻"
+    message: "Happy birthday!! to you 🌻"
   },
   { // 2
     map: [
@@ -428,12 +420,11 @@ const LEVELS = [
   },
 ];
 
-// ---------- Game Engine ----------
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 const COLS = 15, ROWS = 10;
-const TILE = Math.floor(Math.min(W / COLS, H / ROWS)); // 48 by default
+const TILE = Math.floor(Math.min(W / COLS, H / ROWS));
 const ORIGIN_X = Math.floor((W - COLS*TILE)/2);
 const ORIGIN_Y = Math.floor((H - ROWS*TILE)/2);
 
@@ -443,40 +434,21 @@ const levelLabel = document.getElementById('levelLabel');
 const levelMsg = document.getElementById('levelMsg');
 const statusEl = document.getElementById('status');
 
-const KEYS = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, KeyW:false, KeyA:false, KeyS:false, KeyD:false };
-
 let current = 0;
 let grid = [];
 let start = {x:1,y:1};
 let goal = {x:13,y:8};
-
-let player = { x:1, y:1, fromX:1, fromY:1, toX:1, toY:1, moving:false, t:0, moveDur: 0.12 };
-let movers = []; // moving hazards
-let storms = new Set(); // stationary hazards as "x,y" keys
+let player = { x:1, y:1, fromX:1, fromY:1, toX:1, toY:1, moving:false, t:0, moveDur: 0.12, bloomed:false };
 
 function loadLevel(i){
   current = i;
   const data = LEVELS[current];
   grid = data.map.map(r => r.split(''));
-  storms.clear();
-  movers = [];
   for (let y=0; y<ROWS; y++){
     for (let x=0; x<COLS; x++){
       const ch = grid[y][x];
       if (ch === 'S'){ start = {x,y}; }
       if (ch === 'G'){ goal = {x,y}; }
-      if (ch === '~'){ storms.add(`${x},${y}`); }
-      if ('<>^v'.includes(ch)){
-        let dx=0, dy=0;
-        if (ch==='>') dx=1;
-        if (ch==='<') dx=-1;
-        if (ch==='^') dy=-1;
-        if (ch==='v') dy=1;
-        movers.push({
-          x, y, prevX:x, prevY:y, dirX:dx, dirY:dy, t:0, stepDur:0.28
-        });
-        grid[y][x] = '.'; // clear cell for pathing
-      }
     }
   }
   player.x = start.x; player.y = start.y;
@@ -488,30 +460,16 @@ function loadLevel(i){
   hideOverlay();
 }
 
-function isWall(x,y){
-  if (x<0 || y<0 || x>=COLS || y>=ROWS) return true;
-  return grid[y][x] === '#';
-}
+function isWall(x,y){ if (x<0||y<0||x>=COLS||y>=ROWS) return true; return grid[y][x] === '#'; }
 function isGoal(x,y){ return x===goal.x && y===goal.y; }
-function isStorm(x,y){ return storms.has(`${x},${y}`); }
-function moverAt(x,y){
-  for (const m of movers){
-    if (Math.round(m.x)===x && Math.round(m.y)===y) return true;
-  }
-  return false;
-}
 
 function tryMove(dx,dy){
   if (player.moving) return;
-  const nx = player.x + dx;
-  const ny = player.y + dy;
+  const nx = player.x + dx, ny = player.y + dy;
   if (isWall(nx,ny)) return;
-  player.fromX = player.x;
-  player.fromY = player.y;
-  player.toX = nx;
-  player.toY = ny;
-  player.moving = true;
-  player.t = 0;
+  player.fromX = player.x; player.fromY = player.y;
+  player.toX = nx; player.toY = ny;
+  player.moving = true; player.t = 0;
 }
 
 function update(dt){
@@ -528,196 +486,74 @@ function update(dt){
   }
 }
 
-
 function draw(){
   ctx.clearRect(0,0,W,H);
-  // grid bg
   for (let y=0; y<ROWS; y++){
     for (let x=0; x<COLS; x++){
-      const px = ORIGIN_X + x*TILE;
-      const py = ORIGIN_Y + y*TILE;
-      ctx.fillStyle = ( (x+y)%2===0 ) ? '#e9f7e9' : '#e3f3e3';
+      const px = ORIGIN_X + x*TILE, py = ORIGIN_Y + y*TILE;
+      ctx.fillStyle = ((x+y)%2===0) ? '#e9f7e9' : '#e3f3e3';
       ctx.fillRect(px, py, TILE, TILE);
-      // grid lines
-      ctx.strokeStyle = 'rgba(0,0,0,0.05)';
-      ctx.strokeRect(px, py, TILE, TILE);
-      // walls
-      if (grid[y][x] === '#'){
-        drawCloudBlock(px,py);
-      }
-      if (isStorm(x,y)){
-        drawStorm(px,py,false);
-      }
-      if (x===goal.x && y===goal.y){
-        drawSun(px,py);
-      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.strokeRect(px, py, TILE, TILE);
+      if (grid[y][x] === '#'){ ctx.fillStyle = '#cfefff'; ctx.fillRect(px,py,TILE,TILE); }
+      if (x===goal.x && y===goal.y){ drawSun(px,py); }
     }
   }
-  // movers
-  for (const m of movers){
-    const fx = m.prevX + (m.x - m.prevX) * (m.t / m.stepDur);
-    const fy = m.prevY + (m.y - m.prevY) * (m.t / m.stepDur);
-    const px = ORIGIN_X + fx*TILE;
-    const py = ORIGIN_Y + fy*TILE;
-    drawStorm(px,py,true);
-  }
-  // player
   const px = ORIGIN_X + (player.moving ? (player.fromX + (player.toX - player.fromX) * Math.min(player.t/player.moveDur,1)) : player.x)*TILE;
   const py = ORIGIN_Y + (player.moving ? (player.fromY + (player.toY - player.fromY) * Math.min(player.t/player.moveDur,1)) : player.y)*TILE;
-  drawSunflower(px,py);
-}
-
-function drawCloudBlock(px,py){
-  ctx.fillStyle = '#cfefff';
-  ctx.fillRect(px+2, py+2, TILE-4, TILE-4);
-  ctx.fillStyle = '#b3e5fc';
-  ctx.fillRect(px+4, py+6, TILE-8, TILE-12);
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.beginPath();
-  const cx = px + TILE/2, cy = py + TILE/2 + 6, r = TILE/5;
-  ctx.arc(cx-r, cy, r, 0, Math.PI*2);
-  ctx.arc(cx, cy-r/2, r*1.2, 0, Math.PI*2);
-  ctx.arc(cx+r, cy+2, r, 0, Math.PI*2);
-  ctx.fill();
-}
-
-function drawStorm(px,py, moving){
-  // dark cloud + lightning
-  ctx.fillStyle = moving ? '#6b8694' : '#7c8f99';
-  ctx.beginPath();
-  const cx = px + TILE/2, cy = py + TILE/2, r = TILE/5;
-  ctx.arc(cx-r, cy+2, r, 0, Math.PI*2);
-  ctx.arc(cx, cy-r/4, r*1.2, 0, Math.PI*2);
-  ctx.arc(cx+r, cy+2, r, 0, Math.PI*2);
-  ctx.fill();
-  // lightning bolt
-  ctx.fillStyle = '#ffd54f';
-  ctx.beginPath();
-  ctx.moveTo(cx-4, cy+4);
-  ctx.lineTo(cx+2, cy+4);
-  ctx.lineTo(cx-2, cy+12);
-  ctx.lineTo(cx+6, cy+12);
-  ctx.lineTo(cx, cy+22);
-  ctx.closePath();
-  ctx.fill();
+  drawSunflower(px,py, player.bloomed);
 }
 
 function drawSun(px,py){
   const cx = px + TILE/2, cy = py + TILE/2, r = TILE*0.28;
-  ctx.fillStyle = '#ffeb3b';
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,215,0,0.9)';
-  ctx.lineWidth = 3;
-  for (let a=0; a<Math.PI*2; a+=Math.PI/6){
-    const x1 = cx + Math.cos(a)* (r+3);
-    const y1 = cy + Math.sin(a)* (r+3);
-    const x2 = cx + Math.cos(a)* (r+10);
-    const y2 = cy + Math.sin(a)* (r+10);
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  }
+  ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
 }
 
-function drawSunflower(px,py){
-  const cx = px + TILE/2, cy = py + TILE/2;
-  const r = TILE*0.22;
-  // petals
-  ctx.fillStyle = '#ffd54f';
+function drawSunflower(px,py, bloomed){
+  const cx = px + TILE/2, cy = py + TILE/2, r = TILE*0.22;
+  ctx.fillStyle = bloomed ? '#ffd54f' : '#cfcfcf'; // petals
   for (let a=0; a<Math.PI*2; a+=Math.PI/6){
-    const x = cx + Math.cos(a)* (r*1.6);
-    const y = cy + Math.sin(a)* (r*1.6);
+    const x = cx + Math.cos(a)* (r*1.6), y = cy + Math.sin(a)* (r*1.6);
     ctx.beginPath(); ctx.ellipse(x,y, r*0.6, r*0.35, a, 0, Math.PI*2); ctx.fill();
   }
-  // center
-  ctx.fillStyle = '#5d4037';
+  ctx.fillStyle = bloomed ? '#5d4037' : '#777'; // center
   ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-  // little face (cute)
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(cx - r/2.5, cy - r/6, r/10, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx + r/2.5, cy - r/6, r/10, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx, cy + r/6, r/3.2, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
-  // stem
-  ctx.strokeStyle = '#43a047'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.moveTo(cx, cy+r); ctx.lineTo(cx, cy+r*2); ctx.stroke();
-  ctx.strokeStyle = '#66bb6a'; ctx.beginPath(); ctx.moveTo(cx, cy+r*1.4); ctx.lineTo(cx-8, cy+r*1.7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy+r*1.4); ctx.lineTo(cx+8, cy+r*1.8); ctx.stroke();
 }
 
-// ---------- Input ----------
+// ---------- UI ----------
 window.addEventListener('keydown', (e)=>{
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.code)){
-    e.preventDefault();
-  }
-  KEYS[e.code] = true;
-
-  if (overlay.classList.contains('show') && e.code === 'Enter'){
-    hideOverlay();
-    nextLevel();
-    return;
-  }
-
+  if (overlay.classList.contains('show') && e.code === 'Enter'){ hideOverlay(); nextLevel(); return; }
   switch(e.code){
     case 'ArrowUp': case 'KeyW': tryMove(0,-1); break;
     case 'ArrowDown': case 'KeyS': tryMove(0,1); break;
     case 'ArrowLeft': case 'KeyA': tryMove(-1,0); break;
     case 'ArrowRight': case 'KeyD': tryMove(1,0); break;
-    case 'KeyR': resetLevel(); break;
+    case 'KeyR': loadLevel(current); break;
     case 'KeyN': nextLevel(); break;
     case 'KeyP': prevLevel(); break;
   }
 });
-window.addEventListener('keyup', (e)=>{ KEYS[e.code] = false; });
-
-document.getElementById('resetBtn').onclick = resetLevel;
+document.getElementById('resetBtn').onclick = ()=>loadLevel(current);
 document.getElementById('prevBtn').onclick = prevLevel;
 document.getElementById('nextBtn').onclick = nextLevel;
 
-function resetLevel(){
-  loadLevel(current);
-  flashStatus("Reset 🔄");
-}
-function nextLevel(){
-  if (current < LEVELS.length - 1){
-    loadLevel(current+1);
-  } else {
-    // wrap or stay
-    flashStatus("All levels done! 🎉");
-  }
-}
-function prevLevel(){
-  if (current > 0){
-    loadLevel(current-1);
-  }
-}
+document.getElementById('startBtn').onclick = ()=>{
+  intro.classList.remove('show');
+  music.play(); // start music on user gesture
+};
 
-function winLevel(){
-  // show message
-  levelMsg.textContent = LEVELS[current].message || "Level clear! 🌻";
-  showOverlay();
-}
-
+function nextLevel(){ if (current < LEVELS.length-1){ loadLevel(current+1); } }
+function prevLevel(){ if (current > 0){ loadLevel(current-1); } }
+function winLevel(){ levelMsg.textContent = LEVELS[current].message || "Level clear!"; showOverlay(); }
 function showOverlay(){ overlay.classList.add('show'); }
 function hideOverlay(){ overlay.classList.remove('show'); }
-
-function updateLevelLabel(){
-  levelLabel.textContent = `Level ${current+1} / ${LEVELS.length}`;
-}
-
-function flashStatus(text){
-  statusEl.textContent = text;
-  setTimeout(()=>{ statusEl.textContent = ''; }, 1000);
-}
+function updateLevelLabel(){ levelLabel.textContent = `Level ${current+1} / ${LEVELS.length}`; }
 
 // ---------- Game Loop ----------
 let last = performance.now();
 function loop(now){
   const dt = Math.min(0.033, (now - last)/1000);
-  last = now;
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
+  last = now; update(dt); draw(); requestAnimationFrame(loop);
 }
-
 loadLevel(0);
 requestAnimationFrame(loop);
 </script>
